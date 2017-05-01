@@ -1,35 +1,124 @@
+//var endpoint = "http://api."
+var express    = require('express');        // call express
+var app        = express();                 // define our app using express
+var bodyParser = require('body-parser');
+var Order    = require('./MODELS/order');
+var mongoose   = require('mongoose');
+//mongoose.connect('your db')
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
-/**
- * Module dependencies.
- */
 
-var express = require('express')
-  , routes = require('./routes')
-  , user = require('./routes/user')
-  , http = require('http')
-  , path = require('path');
+var STATUS = "";
 
-var app = express();
 
-// all environments
-app.set('port', process.env.PORT || 3000);
-app.set('views', __dirname + '/views');
-app.set('view engine', 'ejs');
-app.use(express.favicon());
-app.use(express.logger('dev'));
-app.use(express.bodyParser());
-app.use(express.methodOverride());
-app.use(app.router);
-app.use(express.static(path.join(__dirname, 'public')));
 
-// development only
-if ('development' == app.get('env')) {
-  app.use(express.errorHandler());
-}
 
-app.get('/', routes.index);
-app.get('/users', user.list);
+var port = process.env.PORT || 8080;        // set our port
 
-http.createServer(app).listen(app.get('port'), function(){
-  console.log('Express server listening on port ' + app.get('port'));
-});
+// ROUTES FOR OUR API
+// =============================================================================
+var router = express.Router();              // get an instance of the express Router
+//var order_id;
+
+router.route('/order')
+
+    .post(function(req, res) {
+        
+         var order = new Order();
+         order.location = req.body.location ;
+         order.qty  = req.body.qty;
+         order.milk = req.body.milk;
+         order.size = req.body.size;
+         order.name = req.body.name;
+
+ 
+          order.save(function(err) {
+            //order_id =order.id ;
+            if (err){
+                STATUS = "Unsuccessful";
+                res.send(err);
+            }
+           console.log(req.body);
+            STATUS = "Successful" ;
+            res.status(200).send(order.id);
+        
+             
+    });
+       //   console.log(order_id);
+
+       });
+
+    router.route('/orders')
+
+
+       .get(function(req, res) {
+        Order.find(function(err, order) {
+            if (err)
+                res.status(404).send({message : 'There are no orders'});
+
+            res.status(200).json(order);
+        });
+    });
+       
+router.route('/order/:order_id')
+    .get(function(req, res) {
+        Order.findById(req.params.order_id, function(err, order) {
+            if (err)
+                res.status(404).send({message : 'Order not found'});
+            res.status(200).json(order);
+        });
+    })
+
+
+    .put(function(req, res) {
+
+        Order.findById(req.params.order_id, function(err, order) {
+
+            if (err)
+                res.send({message : 'Cannot update the order'});
+         
+           order.location = req.body.location ;
+           order.qty  = req.body.qty;
+           order.milk = req.body.milk;
+           order.size = req.body.size;
+           order.name = req.body.name;
+
+        
+            order.save(function(err) {
+                if (err)
+                    res.send(err);
+
+                res.status(200).json({ message: 'Order updated!' });
+            });
+
+        });
+    })
+
+
+    .delete(function(req, res) {
+        Order.remove({
+            _id: req.params.order_id
+        }, function(err, order) {
+            if (err)
+                res.send({message : 'cannot delete the order'});
+
+            res.json({ message: 'Successfully deleted' });
+        });
+    });
+
+
+
+
+
+// more routes for our API will happen here
+
+// REGISTER OUR ROUTES -------------------------------
+// all of our routes will be prefixed with /api
+
+app.use('/api/sanJose', router);
+
+// START THE SERVER
+// =============================================================================
+app.listen(port);
+console.log('Server running on port ' + port);
